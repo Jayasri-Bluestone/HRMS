@@ -1,0 +1,250 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root,
+[data-theme='orange'] {
+  --color-primary-50: #fff8f3;
+  --color-primary-200: #ffd4b0;
+  --color-primary-500: #ff7a1a;
+  --color-primary-600: #ea580c;
+  --color-primary-800: #9a3412;
+  --sidebar-bg: #181a20;
+  --sidebar-border: #2a2e39;
+  --accent-gradient-start: #ea580c;
+  --accent-gradient-end: #ff7a1a;
+}
+
+[data-theme='sapphire'] {
+  --color-primary-50: #eff6ff;
+  --color-primary-200: #bfdbfe;
+  --color-primary-500: #3b82f6;
+  --color-primary-600: #2563eb;
+  --color-primary-800: #1e40af;
+  --sidebar-bg: #0f172a;
+  --sidebar-border: #1e293b;
+  --accent-gradient-start: #2563eb;
+  --accent-gradient-end: #0284c7;
+}
+
+[data-theme='violet'] {
+  --color-primary-50: #f5f3ff;
+  --color-primary-200: #ddd6fe;
+  --color-primary-500: #8b5cf6;
+  --color-primary-600: #7c3aed;
+  --color-primary-800: #5b21b6;
+  --sidebar-bg: #1e1b4b;
+  --sidebar-border: #312e81;
+  --accent-gradient-start: #7c3aed;
+  --accent-gradient-end: #6366f1;
+}
+
+[data-theme='rose'] {
+  --color-primary-50: #fff1f2;
+  --color-primary-200: #fecdd3;
+  --color-primary-500: #f43f5e;
+  --color-primary-600: #e11d48;
+  --color-primary-800: #9f1239;
+  --sidebar-bg: #27272a;
+  --sidebar-border: #3f3f46;
+  --accent-gradient-start: #e11d48;
+  --accent-gradient-end: #fb7185;
+}
+
+[data-theme='amber'] {
+  --color-primary-50: #fffbeb;
+  --color-primary-200: #fde68a;
+  --color-primary-500: #f59e0b;
+  --color-primary-600: #d97706;
+  --color-primary-800: #92400e;
+  --sidebar-bg: #292524;
+  --sidebar-border: #44403c;
+  --accent-gradient-start: #d97706;
+  --accent-gradient-end: #f59e0b;
+}
+
+@layer base {
+  body {
+    @apply bg-[#f4f6f8] text-slate-800 antialiased font-sans;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  ::selection {
+    background-color: #ffd4b0;
+    color: #0f172a;
+  }
+}
+
+/* Custom rounded pill styling */
+.pill-active {
+  background-color: #ff7a1a;
+  color: #111318;
+  font-weight: 600;
+}
+
+.pill-inactive {
+  background-color: #ffffff;
+  color: #64748b;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.pill-inactive:hover {
+  background-color: #f1f5f9;
+  color: #1e293b;
+}
+
+/* Status dots */
+.status-pill-done {
+  background-color: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #dcfce7;
+}
+
+.status-pill-waiting {
+  background-color: #fffbeb;
+  color: #d97706;
+  border: 1px solid #fef3c7;
+}
+
+.status-pill-failed {
+  background-color: #fff1f2;
+  color: #e11d48;
+  border: 1px solid #ffe4e6;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* ============================================================ */
+/* DARK MODE GLOBAL SURFACE, TEXT & CONTROL TOKENS              */
+/* ============================================================ */
+html.dark {
+  color-scheme: dark;
+}
+
+html.dark body {
+  background-color: #0d0f13;
+  color: #e2e8f0;
+}
+
+html.dark .bg-\[\#f4f6f8\] {
+  background-color: #0d0f13;
+}
+
+html.dark .bg-white,
+html.dark .bg-white\/90 {
+  background-color: #161820;
+  color: #e2e8f0;
+}
+
+html.dark .bg-\[\#f8fafc\],
+html.dark .bg-slate-50,
+html.dark .bg-slate-50\/90,
+html.dark .bg-slate-50\/80,
+html.dark .bg-slate-50\/70,
+html.dark .bg-slate-50\/60,
+html.dark .bg-slate-50\/50,
+html.dark .bg-slate-50\/40,
+html.dark .bg-slate-100,
+html.dark .bg-slate-100\/80 {
+  background-color: #1e212b;
+}
+
+html.dark .bg-\[\#fff8f3\] {
+  background-color: #241913;
+}
+
+html.dark .text-slate-900,
+html.dark .text-slate-800,
+html.dark .text-\[\#181a20\] {
+  color: #f1f5f9;
+}
+
+/* Keep dark text legible on bright orange accent pills inside dark mode */
+html.dark .bg-\[\#ff7a1a\],
+html.dark .bg-\[\#ff7a1a\] * {
+  color: #111318;
+}
+
+html.dark .bg-\[\#fff1e6\],
+html.dark .bg-\[\#fff1e6\]\/30,
+html.dark .bg-\[\#fff1e6\]\/40,
+html.dark .bg-\[\#fff1e6\]\/50 {
+  background-color: rgba(255, 122, 26, 0.16);
+}
+
+html.dark .text-\[\#c2410c\],
+html.dark .text-\[\#ea580c\] {
+  color: #ff9f59;
+}
+
+html.dark .text-slate-700,
+html.dark .text-slate-600 {
+  color: #cbd5e1;
+}
+
+html.dark .text-slate-500,
+html.dark .text-slate-400 {
+  color: #94a3b8;
+}
+
+html.dark .border-slate-100,
+html.dark .border-slate-200,
+html.dark .border-slate-200\/90,
+html.dark .border-slate-200\/80,
+html.dark .border-slate-200\/60,
+html.dark .border-slate-300,
+html.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #2b2f3c;
+}
+
+html.dark input,
+html.dark select,
+html.dark textarea {
+  background-color: #111319;
+  color: #f1f5f9;
+  border-color: #2f3443;
+}
+
+html.dark option {
+  background-color: #161820;
+  color: #f1f5f9;
+}
+
+html.dark .hover\:bg-slate-50:hover,
+html.dark .hover\:bg-slate-50\/70:hover,
+html.dark .hover\:bg-slate-50\/60:hover,
+html.dark .hover\:bg-slate-100:hover,
+html.dark .hover\:bg-slate-100\/70:hover,
+html.dark .hover\:bg-white:hover {
+  background-color: #232734;
+}
+
+html.dark ::-webkit-scrollbar-track {
+  background: #111319;
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: #2f3443;
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #454c61;
+}
