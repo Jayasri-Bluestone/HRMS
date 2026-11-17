@@ -26,7 +26,25 @@ export const INITIAL_EMPLOYEES: Employee[] = [
     bankDetails: {
       accountNumber: '**** **** 8923',
       bankName: 'HDFC Bank',
-      ifscOrIban: 'HDFC0001234'
+      ifscOrIban: 'HDFC0001234',
+      accountHolderName: 'Vikram Sharma'
+    },
+    statutoryDetails: {
+      hasExistingPf: true,
+      pfNumber: 'MH/BAN/0012345/000/0001001',
+      uanNumber: '100912345678',
+      panNumber: 'AAAVS1234F',
+      nationalId: '5421 9812 3456'
+    },
+    personalDetails: {
+      gender: 'MALE',
+      dateOfBirth: '1988-04-12',
+      bloodGroup: 'O+',
+      maritalStatus: 'MARRIED',
+      workLocation: 'India Corporate HQ - Mumbai Tech Park',
+      employmentType: 'FULL_TIME',
+      emergencyContactName: 'Anjali Sharma (Spouse)',
+      emergencyContactPhone: '+91 98765 00001'
     },
     documentsCount: 4
   },
@@ -55,7 +73,25 @@ export const INITIAL_EMPLOYEES: Employee[] = [
     bankDetails: {
       accountNumber: '**** **** 4412',
       bankName: 'ICICI Bank',
-      ifscOrIban: 'ICIC0000552'
+      ifscOrIban: 'ICIC0000552',
+      accountHolderName: 'Priya Nair'
+    },
+    statutoryDetails: {
+      hasExistingPf: true,
+      pfNumber: 'MH/PUN/0023456/000/0002002',
+      uanNumber: '100823456789',
+      panNumber: 'BBVPN2345K',
+      nationalId: '8912 3456 7890'
+    },
+    personalDetails: {
+      gender: 'FEMALE',
+      dateOfBirth: '1991-09-24',
+      bloodGroup: 'A+',
+      maritalStatus: 'MARRIED',
+      workLocation: 'India Corporate HQ - Mumbai Tech Park',
+      employmentType: 'FULL_TIME',
+      emergencyContactName: 'Suresh Nair (Spouse)',
+      emergencyContactPhone: '+91 98220 99999'
     },
     documentsCount: 3
   },
@@ -86,7 +122,25 @@ export const INITIAL_EMPLOYEES: Employee[] = [
     bankDetails: {
       accountNumber: '**** **** 9081',
       bankName: 'State Bank of India',
-      ifscOrIban: 'SBIN0004321'
+      ifscOrIban: 'SBIN0004321',
+      accountHolderName: 'Arjun Mehta'
+    },
+    statutoryDetails: {
+      hasExistingPf: true,
+      pfNumber: 'MH/BAN/0012345/000/0003003',
+      uanNumber: '100734567890',
+      panNumber: 'CCCAM3456L',
+      nationalId: '6789 0123 4567'
+    },
+    personalDetails: {
+      gender: 'MALE',
+      dateOfBirth: '1993-11-05',
+      bloodGroup: 'B+',
+      maritalStatus: 'SINGLE',
+      workLocation: 'India Corporate HQ - Mumbai Tech Park',
+      employmentType: 'FULL_TIME',
+      emergencyContactName: 'Ramesh Mehta (Father)',
+      emergencyContactPhone: '+91 97112 00000'
     },
     documentsCount: 5
   },
@@ -117,7 +171,25 @@ export const INITIAL_EMPLOYEES: Employee[] = [
     bankDetails: {
       accountNumber: '**** **** 3110',
       bankName: 'Axis Bank',
-      ifscOrIban: 'UTIB0001009'
+      ifscOrIban: 'UTIB0001009',
+      accountHolderName: 'Ananya Iyer'
+    },
+    statutoryDetails: {
+      hasExistingPf: true,
+      pfNumber: 'MH/BAN/0012345/000/0004004',
+      uanNumber: '100645678901',
+      panNumber: 'DDDAP4567M',
+      nationalId: '3456 7890 1234'
+    },
+    personalDetails: {
+      gender: 'FEMALE',
+      dateOfBirth: '1994-02-18',
+      bloodGroup: 'AB+',
+      maritalStatus: 'SINGLE',
+      workLocation: 'India Corporate HQ - Mumbai Tech Park',
+      employmentType: 'FULL_TIME',
+      emergencyContactName: 'Kavitha Iyer (Mother)',
+      emergencyContactPhone: '+91 99345 11111'
     },
     documentsCount: 2
   },
@@ -148,7 +220,25 @@ export const INITIAL_EMPLOYEES: Employee[] = [
     bankDetails: {
       accountNumber: '**** **** 6789',
       bankName: 'Kotak Mahindra Bank',
-      ifscOrIban: 'KKBK0000123'
+      ifscOrIban: 'KKBK0000123',
+      accountHolderName: 'Rohan Deshmukh'
+    },
+    statutoryDetails: {
+      hasExistingPf: true,
+      pfNumber: 'MH/PUN/0034567/000/0005005',
+      uanNumber: '100556789012',
+      panNumber: 'EEERD5678N',
+      nationalId: '1234 5678 9012'
+    },
+    personalDetails: {
+      gender: 'MALE',
+      dateOfBirth: '1997-07-14',
+      bloodGroup: 'B+',
+      maritalStatus: 'SINGLE',
+      workLocation: 'India Corporate HQ - Mumbai Tech Park',
+      employmentType: 'FULL_TIME',
+      emergencyContactName: 'Milind Deshmukh (Father)',
+      emergencyContactPhone: '+91 98980 11111'
     },
     documentsCount: 3
   },
@@ -177,7 +267,24 @@ export const INITIAL_EMPLOYEES: Employee[] = [
     bankDetails: {
       accountNumber: '**** **** 1290',
       bankName: 'HDFC Bank',
-      ifscOrIban: 'HDFC0004567'
+      ifscOrIban: 'HDFC0004567',
+      accountHolderName: 'Sunita Rao'
+    },
+    statutoryDetails: {
+      hasExistingPf: false,
+      uanNumber: '100467890123',
+      panNumber: 'FFFSR6789P',
+      nationalId: '2345 6789 0123'
+    },
+    personalDetails: {
+      gender: 'FEMALE',
+      dateOfBirth: '1998-10-30',
+      bloodGroup: 'O-',
+      maritalStatus: 'SINGLE',
+      workLocation: 'India Corporate HQ - Mumbai Tech Park',
+      employmentType: 'PROBATION',
+      emergencyContactName: 'Radha Rao (Mother)',
+      emergencyContactPhone: '+91 91234 00000'
     },
     documentsCount: 2
   },
@@ -207,7 +314,22 @@ export const INITIAL_EMPLOYEES: Employee[] = [
     bankDetails: {
       accountNumber: '**** **** 9912',
       bankName: 'Emirates NBD',
-      ifscOrIban: 'AE290260001234567890123'
+      ifscOrIban: 'AE290260001234567890123',
+      accountHolderName: 'Tariq Al-Mansoor'
+    },
+    statutoryDetails: {
+      hasExistingPf: false,
+      nationalId: '784-1985-1234567-1'
+    },
+    personalDetails: {
+      gender: 'MALE',
+      dateOfBirth: '1985-03-12',
+      bloodGroup: 'A+',
+      maritalStatus: 'MARRIED',
+      workLocation: 'Middle East LLC - Dubai Internet City',
+      employmentType: 'FULL_TIME',
+      emergencyContactName: 'Fatima Al-Mansoor (Spouse)',
+      emergencyContactPhone: '+971 50 999 8888'
     },
     documentsCount: 4
   },
@@ -237,9 +359,23 @@ export const INITIAL_EMPLOYEES: Employee[] = [
     bankDetails: {
       accountNumber: '**** 4432',
       bankName: 'Barclays Bank UK',
-      ifscOrIban: 'GB29BARC20000012345678'
+      ifscOrIban: 'GB29BARC20000012345678',
+      accountHolderName: 'Oliver Smith'
+    },
+    statutoryDetails: {
+      hasExistingPf: false,
+      nationalId: 'QQ 12 34 56 A'
+    },
+    personalDetails: {
+      gender: 'MALE',
+      dateOfBirth: '1989-12-08',
+      bloodGroup: 'O+',
+      maritalStatus: 'MARRIED',
+      workLocation: 'European Solutions Ltd - London Canary Wharf',
+      employmentType: 'FULL_TIME',
+      emergencyContactName: 'Emma Smith (Spouse)',
+      emergencyContactPhone: '+44 20 7946 0001'
     },
     documentsCount: 3
   }
 ];
-

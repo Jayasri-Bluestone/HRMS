@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Employee,
   AttendanceRecord,
@@ -13,7 +13,9 @@ import {
   ShiftMaster,
   HolidayMaster,
   RolePermissionMap,
-  UserRole
+  UserRole,
+  MissedPunchRequest,
+  PermissionRequest
 } from '../types';
 import { DEFAULT_ROLE_PERMISSIONS } from '../mockData/permissions';
 import { INITIAL_EMPLOYEES } from '../mockData/employees';
@@ -246,6 +248,38 @@ const INITIAL_NOTIFICATIONS: AppNotification[] = [
   }
 ];
 
+const INITIAL_MISSED_PUNCH_REQUESTS: MissedPunchRequest[] = [
+  {
+    id: 'mpr-1',
+    employeeId: 'emp-005',
+    employeeName: 'Rohan Deshmukh',
+    date: '2026-11-04',
+    type: 'CHECK_OUT',
+    requestedCheckIn: '09:12 AM',
+    requestedCheckOut: '06:15 PM',
+    reason: 'Biometric checkout terminal was offline during shift exit',
+    status: 'PENDING',
+    appliedOn: '2026-11-05'
+  }
+];
+
+const INITIAL_PERMISSION_REQUESTS: PermissionRequest[] = [
+  {
+    id: 'perm-1',
+    employeeId: 'emp-005',
+    employeeName: 'Rohan Deshmukh',
+    department: 'Engineering',
+    date: '2026-11-18',
+    startTime: '03:30 PM',
+    endTime: '05:30 PM',
+    durationHours: 2,
+    reasonCategory: 'PERSONAL',
+    reason: 'Banking work and document verification at branch',
+    status: 'PENDING',
+    appliedOn: '2026-11-16'
+  }
+];
+
 const PERSONAL_HISTORICAL_ATTENDANCE: AttendanceRecord[] = [
   {
     id: 'emp-att-11',
@@ -447,7 +481,7 @@ interface HrmsDataContextType {
   notifications: AppNotification[];
   branches: BranchNode[];
   punchSession: PunchSessionState;
-  addEmployee: (emp: Employee) => Promise<void>;
+  addEmployee: (emp: Employee, credentials?: { password?: string; role?: UserRole; shiftId?: string }) => Promise<void>;
   punchIn: () => Promise<void>;
   punchOut: () => Promise<void>;
   submitRegularization: (payload: {
@@ -458,6 +492,28 @@ interface HrmsDataContextType {
     remarks?: string;
   }) => Promise<void>;
   resolveAttendanceException: (recordId: string) => Promise<void>;
+  // Missed Punch Regularization
+  missedPunchRequests: MissedPunchRequest[];
+  applyMissedPunch: (req: {
+    date: string;
+    type: 'CHECK_IN' | 'CHECK_OUT' | 'BOTH';
+    requestedCheckIn?: string;
+    requestedCheckOut?: string;
+    reason: string;
+    remarks?: string;
+  }) => Promise<void>;
+  reviewMissedPunch: (id: string, status: 'APPROVED' | 'REJECTED', managerComments?: string) => Promise<void>;
+  // Permissions & Short Leaves
+  permissionRequests: PermissionRequest[];
+  applyPermission: (req: {
+    date: string;
+    startTime: string;
+    endTime: string;
+    durationHours: number;
+    reasonCategory: 'PERSONAL' | 'MEDICAL' | 'OFFICIAL' | 'EMERGENCY';
+    reason: string;
+  }) => Promise<void>;
+  reviewPermission: (id: string, status: 'APPROVED' | 'REJECTED', managerComments?: string) => Promise<void>;
   submitWfhNotice: (date: string, reason: string) => void;
   applyLeave: (request: LeaveRequest) => Promise<void>;
   reviewLeave: (id: string, status: 'APPROVED' | 'REJECTED', managerComments?: string) => Promise<void>;
@@ -529,16 +585,77 @@ export const HrmsDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const { showToast } = useToast();
 
   const now = new Date();
-  const [employees, setEmployees] = useState<Employee[]>(INITIAL_EMPLOYEES);
-  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>(INITIAL_ATTENDANCE);
-  const [personalAttendanceRecords, setPersonalAttendanceRecords] = useState<AttendanceRecord[]>(
-    PERSONAL_HISTORICAL_ATTENDANCE
-  );
+  const activeEmpId = currentUser.employeeId || 'emp-005';
+
+  const [employees, setEmployees] = useState<Employee[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('hrms_cached_employees');
+      if (saved) {
+        try { return JSON.parse(saved); } catch {}
+      }
+    }
+    return INITIAL_EMPLOYEES;
+  });
+
+  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('hrms_cached_attendance_records');
+      if (saved) {
+        try { return JSON.parse(saved); } catch {}
+      }
+    }
+    return INITIAL_ATTENDANCE;
+  });
+
+  const [missedPunchRequests, setMissedPunchRequests] = useState<MissedPunchRequest[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('hrms_missed_punch_requests');
+      if (saved) {
+        try { return JSON.parse(saved); } catch {}
+      }
+    }
+    return INITIAL_MISSED_PUNCH_REQUESTS;
+  });
+
+  const [permissionRequests, setPermissionRequests] = useState<PermissionRequest[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('hrms_permission_requests');
+      if (saved) {
+        try { return JSON.parse(saved); } catch {}
+      }
+    }
+    return INITIAL_PERMISSION_REQUESTS;
+  });
+
+  const [leaveBalancesByEmp, setLeaveBalancesByEmp] = useState<Record<string, LeaveBalance[]>>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('hrms_leave_balances_by_emp');
+      if (saved) {
+        try { return JSON.parse(saved); } catch {}
+      }
+    }
+    return {
+      'emp-005': CURRENT_EMPLOYEE_LEAVE_BALANCES
+    };
+  });
+
+  const leaveBalances: LeaveBalance[] = leaveBalancesByEmp[activeEmpId] || [
+    { type: 'Annual Leave', total: 15, used: 0, available: 15 },
+    { type: 'Casual Leave', total: 12, used: 0, available: 12 },
+    { type: 'Sick Leave', total: 12, used: 0, available: 12 }
+  ];
+
+  const personalAttendanceRecords = useMemo(() => {
+    const list = attendanceRecords.filter((r) => r.employeeId === activeEmpId);
+    if (list.length > 0) return list;
+    if (activeEmpId === 'emp-005') return PERSONAL_HISTORICAL_ATTENDANCE;
+    return [];
+  }, [attendanceRecords, activeEmpId]);
+
   const [calendarAttendance, setCalendarAttendance] = useState<Record<string, DayAttendance>>(() =>
     buildInitialMonthCalendar(now.getFullYear(), now.getMonth())
   );
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>(INITIAL_LEAVES);
-  const [leaveBalances, setLeaveBalances] = useState<LeaveBalance[]>(CURRENT_EMPLOYEE_LEAVE_BALANCES);
   const [payrollRuns, setPayrollRuns] = useState<PayrollRun[]>(INITIAL_PAYROLL_RUNS);
   const [payslips] = useState<Record<string, Payslip>>(SAMPLE_PAYSLIPS);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(INITIAL_AUDIT_LOGS);
@@ -626,17 +743,24 @@ export const HrmsDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return DEFAULT_ROLE_PERMISSIONS;
   });
 
-  const [punchSessionsByEmp, setPunchSessionsByEmp] = useState<Record<string, PunchSessionState>>({
-    'emp-005': {
-      hasPunchedIn: true,
-      hasPunchedOut: false,
-      punchInTime: '09:15 AM',
-      punchOutTime: null,
-      locationEvidence: 'Pune Tech Center (18.5204° N, 73.8567° E)'
+  const [punchSessionsByEmp, setPunchSessionsByEmp] = useState<Record<string, PunchSessionState>>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('hrms_punch_sessions_by_emp');
+      if (saved) {
+        try { return JSON.parse(saved); } catch {}
+      }
     }
+    return {
+      'emp-005': {
+        hasPunchedIn: true,
+        hasPunchedOut: false,
+        punchInTime: '09:15 AM',
+        punchOutTime: null,
+        locationEvidence: 'Pune Tech Center (18.5204° N, 73.8567° E)'
+      }
+    };
   });
 
-  const activeEmpId = currentUser.employeeId || 'emp-005';
   const punchSession: PunchSessionState = punchSessionsByEmp[activeEmpId] || {
     hasPunchedIn: false,
     hasPunchedOut: false,
@@ -1027,7 +1151,11 @@ export const HrmsDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
   }, [isAuthenticated, isDemoMode, token, currentTenant.id, currentTenant.countryId, currentTenant.currency, baseRole, currentUser.name]);
 
-  const addEmployee = async (emp: Employee) => {
+  const addEmployee = async (emp: Employee, credentials?: { password?: string; role?: UserRole; shiftId?: string }) => {
+    const password = credentials?.password || 'Welcome@123';
+    const role = credentials?.role || 'EMPLOYEE';
+    const shiftId = credentials?.shiftId || 'sh-1';
+
     if (!isDemoMode && token) {
       try {
         await apiClient.employees.create({
@@ -1037,26 +1165,92 @@ export const HrmsDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           email: emp.email,
           phone: emp.phone,
           joiningDate: emp.joiningDate,
-          monthlyGross: emp.salary.monthlyGross
+          monthlyGross: emp.salary.monthlyGross,
+          password,
+          role,
+          bankDetails: emp.bankDetails
         });
       } catch {
         // Continue with optimistic local state in resilient mode
       }
     }
 
-    setEmployees((prev) => [emp, ...prev]);
+    // Provision user credentials in localStorage for instant offline & demo login
+    if (typeof window !== 'undefined') {
+      try {
+        const rawAccounts = localStorage.getItem('hrms_user_accounts');
+        const existingAccounts: any[] = rawAccounts ? JSON.parse(rawAccounts) : [];
+        const newAccount = {
+          email: emp.email.toLowerCase().trim(),
+          password,
+          role,
+          employeeId: emp.id,
+          name: `${emp.firstName} ${emp.lastName}`,
+          tenantId: emp.tenantId,
+          department: emp.department,
+          designation: emp.designation,
+          shiftId
+        };
+        const updatedAccounts = [
+          newAccount,
+          ...existingAccounts.filter((a) => a.email.toLowerCase() !== newAccount.email)
+        ];
+        localStorage.setItem('hrms_user_accounts', JSON.stringify(updatedAccounts));
+      } catch {}
+    }
+
+    // Initialize personal leave balances for this employee
+    setLeaveBalancesByEmp((prev) => {
+      const updated = {
+        ...prev,
+        [emp.id]: [
+          { type: 'Annual Leave', total: 15, used: 0, available: 15 },
+          { type: 'Casual Leave', total: 12, used: 0, available: 12 },
+          { type: 'Sick Leave', total: 12, used: 0, available: 12 }
+        ]
+      };
+      persistMaster('hrms_leave_balances_by_emp', updated);
+      return updated;
+    });
+
+    // Initialize punch session for this employee
+    setPunchSessionsByEmp((prev) => {
+      const updated = {
+        ...prev,
+        [emp.id]: {
+          hasPunchedIn: false,
+          hasPunchedOut: false,
+          punchInTime: null,
+          punchOutTime: null,
+          locationEvidence: 'Corporate HQ (GPS Ready)'
+        }
+      };
+      persistMaster('hrms_punch_sessions_by_emp', updated);
+      return updated;
+    });
+
+    setEmployees((prev) => {
+      const updated = [emp, ...prev];
+      persistMaster('hrms_cached_employees', updated);
+      return updated;
+    });
+
     adjustTenantEmployeeCount(emp.tenantId, 1);
     recordAuditEvent(
       'EMPLOYEE_ONBOARDED',
       'Employees',
-      `Added ${emp.firstName} ${emp.lastName} (${emp.employeeCode}) to ${emp.department}`
+      `Added ${emp.firstName} ${emp.lastName} (${emp.employeeCode}) [Role: ${role}, Login: ${emp.email}]`
     );
     pushNotification(
       'general',
-      'New Employee Onboarded',
-      `${emp.firstName} ${emp.lastName} (${emp.employeeCode}) joined ${emp.department}.`
+      'New Employee Provisioned',
+      `${emp.firstName} ${emp.lastName} (${emp.employeeCode}) onboarded. Portal access granted with role ${role}.`
     );
-    showToast(`Added ${emp.firstName} ${emp.lastName}`, 'success', `Assigned code ${emp.employeeCode}`);
+    showToast(
+      `Employee Added: ${emp.firstName} ${emp.lastName}`,
+      'success',
+      `Login: ${emp.email} • Password: ${password}`
+    );
   };
 
   const punchIn = async () => {
@@ -1072,22 +1266,30 @@ export const HrmsDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
     }
 
-    setPunchSessionsByEmp((prev) => ({
-      ...prev,
-      [activeEmpId]: {
-        hasPunchedIn: true,
-        hasPunchedOut: false,
-        punchInTime: timeStr,
-        punchOutTime: null,
-        locationEvidence: location
-      }
-    }));
+    const currentHour = new Date().getHours();
+    const currentMin = new Date().getMinutes();
+    const isLate = currentHour > 9 || (currentHour === 9 && currentMin > 30);
+    const punchStatus = isLate ? ('LATE' as const) : ('PRESENT' as const);
+
+    const updatedSession = {
+      hasPunchedIn: true,
+      hasPunchedOut: false,
+      punchInTime: timeStr,
+      punchOutTime: null,
+      locationEvidence: location
+    };
+
+    setPunchSessionsByEmp((prev) => {
+      const next = { ...prev, [activeEmpId]: updatedSession };
+      persistMaster('hrms_punch_sessions_by_emp', next);
+      return next;
+    });
 
     setCalendarAttendance((prev) => ({
       ...prev,
       [todayStr]: {
         ...(prev[todayStr] || { date: todayStr, day: new Date().getDate() }),
-        status: 'PRESENT',
+        status: punchStatus,
         checkIn: timeStr,
         note: `Checked in (${location})`
       }
@@ -1101,18 +1303,15 @@ export const HrmsDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       date: todayStr,
       checkIn: timeStr,
       workHours: 0,
-      status: 'PRESENT',
+      status: punchStatus,
       locationEvidence: location
     };
 
-    setPersonalAttendanceRecords((prev) => [
-      newRec,
-      ...prev.filter((r) => !(r.employeeId === activeEmpId && r.date === todayStr))
-    ]);
-    setAttendanceRecords((prev) => [
-      newRec,
-      ...prev.filter((r) => !(r.employeeId === activeEmpId && r.date === todayStr))
-    ]);
+    setAttendanceRecords((prev) => {
+      const updated = [newRec, ...prev.filter((r) => !(r.employeeId === activeEmpId && r.date === todayStr))];
+      persistMaster('hrms_cached_attendance_records', updated);
+      return updated;
+    });
 
     showToast('Checked In Successfully', 'success', `${timeStr} • ${location}`);
   };
@@ -1129,15 +1328,20 @@ export const HrmsDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
     }
 
-    setPunchSessionsByEmp((prev) => ({
-      ...prev,
-      [activeEmpId]: {
-        ...punchSession,
-        hasPunchedIn: true,
-        hasPunchedOut: true,
-        punchOutTime: timeStr
-      }
-    }));
+    setPunchSessionsByEmp((prev) => {
+      const current = prev[activeEmpId] || { hasPunchedIn: true, punchInTime: '09:00 AM' };
+      const next = {
+        ...prev,
+        [activeEmpId]: {
+          ...current,
+          hasPunchedIn: true,
+          hasPunchedOut: true,
+          punchOutTime: timeStr
+        }
+      };
+      persistMaster('hrms_punch_sessions_by_emp', next);
+      return next;
+    });
 
     setCalendarAttendance((prev) => ({
       ...prev,
@@ -1150,15 +1354,16 @@ export const HrmsDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
     }));
 
-    const applyCheckOut = (list: AttendanceRecord[]) =>
-      list.map((r) =>
+    setAttendanceRecords((prev) => {
+      const updated = prev.map((r) =>
         r.employeeId === activeEmpId && r.date === todayStr
           ? { ...r, checkOut: timeStr, workHours: r.workHours || 8.2 }
           : r
       );
+      persistMaster('hrms_cached_attendance_records', updated);
+      return updated;
+    });
 
-    setPersonalAttendanceRecords(applyCheckOut);
-    setAttendanceRecords(applyCheckOut);
     showToast('Shift Completed — Checked Out', 'success', `Logged check-out at ${timeStr}`);
   };
 
@@ -1169,62 +1374,216 @@ export const HrmsDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     reason: string;
     remarks?: string;
   }) => {
-    if (!isDemoMode && token) {
-      try {
-        await apiClient.attendance.regularize({
+    await applyMissedPunch({
+      date: payload.date,
+      type: 'BOTH',
+      requestedCheckIn: payload.checkIn,
+      requestedCheckOut: payload.checkOut,
+      reason: payload.reason,
+      remarks: payload.remarks
+    });
+  };
+
+  const applyMissedPunch = async (req: {
+    date: string;
+    type: 'CHECK_IN' | 'CHECK_OUT' | 'BOTH';
+    requestedCheckIn?: string;
+    requestedCheckOut?: string;
+    reason: string;
+    remarks?: string;
+  }) => {
+    const newReq: MissedPunchRequest = {
+      id: `mpr-${Date.now().toString().slice(-4)}`,
+      employeeId: activeEmpId,
+      employeeName: currentUser.name,
+      date: req.date,
+      type: req.type,
+      requestedCheckIn: req.requestedCheckIn,
+      requestedCheckOut: req.requestedCheckOut,
+      reason: req.reason,
+      remarks: req.remarks,
+      status: 'PENDING',
+      appliedOn: getTodayDateISO()
+    };
+
+    setMissedPunchRequests((prev) => {
+      const updated = [newReq, ...prev];
+      persistMaster('hrms_missed_punch_requests', updated);
+      return updated;
+    });
+
+    setAttendanceRecords((prev) => {
+      const existing = prev.find((r) => r.date === req.date && r.employeeId === activeEmpId);
+      let updated: AttendanceRecord[];
+      if (existing) {
+        updated = prev.map((r) =>
+          r.id === existing.id
+            ? {
+                ...r,
+                status: 'REGULARIZATION_PENDING',
+                checkIn: req.requestedCheckIn || r.checkIn,
+                checkOut: req.requestedCheckOut || r.checkOut,
+                isException: true,
+                locationEvidence: `Regularization Pending: ${req.reason}`
+              }
+            : r
+        );
+      } else {
+        const newRecord: AttendanceRecord = {
+          id: `att-${Date.now()}`,
           employeeId: activeEmpId,
-          date: payload.date,
-          reason: payload.reason,
-          remarks: payload.remarks
-        });
-      } catch {
-        // resilient fallback
+          employeeName: currentUser.name,
+          department: currentUser.department || 'Engineering',
+          date: req.date,
+          checkIn: req.requestedCheckIn || '09:00 AM',
+          checkOut: req.requestedCheckOut || '06:00 PM',
+          workHours: 8.5,
+          status: 'REGULARIZATION_PENDING',
+          isException: true,
+          locationEvidence: `Regularization Pending: ${req.reason}`
+        };
+        updated = [newRecord, ...prev];
       }
-    }
+      persistMaster('hrms_cached_attendance_records', updated);
+      return updated;
+    });
 
     setCalendarAttendance((prev) => ({
       ...prev,
-      [payload.date]: {
-        ...(prev[payload.date] || {
-          date: payload.date,
-          day: Number(payload.date.split('-')[2]) || 1
-        }),
+      [req.date]: {
+        ...(prev[req.date] || { date: req.date, day: Number(req.date.split('-')[2]) || 1 }),
         status: 'REGULARIZATION_PENDING',
-        checkIn: payload.checkIn,
-        checkOut: payload.checkOut,
+        checkIn: req.requestedCheckIn || '09:00 AM',
+        checkOut: req.requestedCheckOut || '06:00 PM',
         workHours: 8.5,
-        regularizationReason: payload.reason,
-        note: `Regularization Pending (${payload.reason}): In ${payload.checkIn} | Out ${payload.checkOut}`
+        regularizationReason: req.reason,
+        note: `Regularization Pending (${req.reason})`
       }
     }));
 
-    const updateList = (list: AttendanceRecord[]) =>
-      list.map((r) =>
-        r.date === payload.date && r.employeeId === activeEmpId
-          ? {
-              ...r,
-              checkIn: payload.checkIn,
-              checkOut: payload.checkOut,
-              status: 'REGULARIZATION_PENDING' as const,
-              isException: true,
-              locationEvidence: `Regularization Pending: ${payload.reason}`
-            }
-          : r
-      );
-
-    setPersonalAttendanceRecords(updateList);
-    setAttendanceRecords(updateList);
     recordAuditEvent(
-      'ATTENDANCE_REGULARIZATION_REQUESTED',
+      'MISSED_PUNCH_REQUESTED',
       'Attendance',
-      `${currentUser.name} requested punch regularization for ${payload.date} (${payload.reason})`
+      `${currentUser.name} applied missed punch regularization for ${req.date} (${req.type})`
+    );
+    showToast('Missed Punch Request Submitted', 'success', `Regularization for ${req.date} sent to manager`);
+  };
+
+  const reviewMissedPunch = async (id: string, status: 'APPROVED' | 'REJECTED', managerComments?: string) => {
+    let targetReq: MissedPunchRequest | undefined;
+    setMissedPunchRequests((prev) => {
+      const updated = prev.map((r) => {
+        if (r.id === id) {
+          targetReq = r;
+          return {
+            ...r,
+            status,
+            managerComments: managerComments || (status === 'APPROVED' ? 'Approved by manager' : 'Declined')
+          };
+        }
+        return r;
+      });
+      persistMaster('hrms_missed_punch_requests', updated);
+      return updated;
+    });
+
+    if (targetReq && status === 'APPROVED') {
+      const target = targetReq as MissedPunchRequest;
+      setAttendanceRecords((prev) => {
+        const updated = prev.map((r) =>
+          r.date === target.date && r.employeeId === target.employeeId
+            ? {
+                ...r,
+                status: 'PRESENT' as const,
+                isException: false,
+                checkIn: target.requestedCheckIn || r.checkIn || '09:00 AM',
+                checkOut: target.requestedCheckOut || r.checkOut || '06:00 PM',
+                workHours: 8.5
+              }
+            : r
+        );
+        persistMaster('hrms_cached_attendance_records', updated);
+        return updated;
+      });
+
+      setCalendarAttendance((prev) => ({
+        ...prev,
+        [target.date]: {
+          ...(prev[target.date] || { date: target.date, day: Number(target.date.split('-')[2]) || 1 }),
+          status: 'PRESENT',
+          checkIn: target.requestedCheckIn || '09:00 AM',
+          checkOut: target.requestedCheckOut || '06:00 PM',
+          workHours: 8.5,
+          note: 'Regularization Approved'
+        }
+      }));
+    }
+
+    recordAuditEvent(
+      'MISSED_PUNCH_REVIEWED',
+      'Attendance',
+      `Manager marked missed punch ${id} as ${status}`
+    );
+    showToast(`Missed Punch Request ${status}`, status === 'APPROVED' ? 'success' : 'info');
+  };
+
+  const applyPermission = async (req: {
+    date: string;
+    startTime: string;
+    endTime: string;
+    durationHours: number;
+    reasonCategory: 'PERSONAL' | 'MEDICAL' | 'OFFICIAL' | 'EMERGENCY';
+    reason: string;
+  }) => {
+    const newPerm: PermissionRequest = {
+      id: `perm-${Date.now().toString().slice(-4)}`,
+      employeeId: activeEmpId,
+      employeeName: currentUser.name,
+      department: currentUser.department || 'Engineering',
+      date: req.date,
+      startTime: req.startTime,
+      endTime: req.endTime,
+      durationHours: req.durationHours,
+      reasonCategory: req.reasonCategory,
+      reason: req.reason,
+      status: 'PENDING',
+      appliedOn: getTodayDateISO()
+    };
+
+    setPermissionRequests((prev) => {
+      const updated = [newPerm, ...prev];
+      persistMaster('hrms_permission_requests', updated);
+      return updated;
+    });
+
+    recordAuditEvent(
+      'PERMISSION_REQUESTED',
+      'Attendance & Leaves',
+      `${currentUser.name} requested ${req.durationHours}h permission on ${req.date} (${req.startTime} - ${req.endTime})`
     );
     pushNotification(
-      'punch',
-      'Regularization Request Submitted',
-      `Punch regularization for ${payload.date} sent to your manager for approval.`
+      'general',
+      'Permission Pass Submitted',
+      `Your ${req.durationHours}h permission request for ${req.date} is pending manager review.`
     );
-    showToast('Regularization Request Submitted', 'success', `Pending manager approval for ${payload.date}`);
+    showToast('Permission Pass Submitted', 'success', `${req.durationHours}h on ${req.date} (${req.startTime} - ${req.endTime})`);
+  };
+
+  const reviewPermission = async (id: string, status: 'APPROVED' | 'REJECTED', managerComments?: string) => {
+    setPermissionRequests((prev) => {
+      const updated = prev.map((p) =>
+        p.id === id ? { ...p, status, managerComments: managerComments || (status === 'APPROVED' ? 'Approved' : 'Declined') } : p
+      );
+      persistMaster('hrms_permission_requests', updated);
+      return updated;
+    });
+
+    recordAuditEvent(
+      'PERMISSION_REVIEWED',
+      'Attendance & Leaves',
+      `Permission request ${id} marked as ${status}`
+    );
+    showToast(`Permission Request ${status}`, status === 'APPROVED' ? 'success' : 'info');
   };
 
   const resolveAttendanceException = async (recordId: string) => {
@@ -1236,16 +1595,13 @@ export const HrmsDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
     }
 
-    setAttendanceRecords((prev) =>
-      prev.map((rec) =>
+    setAttendanceRecords((prev) => {
+      const updated = prev.map((rec) =>
         rec.id === recordId ? { ...rec, isException: false, status: 'PRESENT' as const } : rec
-      )
-    );
-    setPersonalAttendanceRecords((prev) =>
-      prev.map((rec) =>
-        rec.id === recordId ? { ...rec, isException: false, status: 'PRESENT' as const } : rec
-      )
-    );
+      );
+      persistMaster('hrms_cached_attendance_records', updated);
+      return updated;
+    });
     recordAuditEvent('ATTENDANCE_EXCEPTION_RESOLVED', 'Attendance', `Resolved attendance exception ${recordId}`);
     showToast('Attendance Exception Resolved', 'success');
   };
@@ -1337,15 +1693,24 @@ export const HrmsDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     if (status === 'APPROVED' && target) {
       const targetPrefix = target.leaveType.toLowerCase();
-      setLeaveBalances((prev) =>
-        prev.map((bal) => {
-          if (bal.type.toLowerCase().includes(targetPrefix)) {
+      const targetEmpId = target.employeeId;
+      setLeaveBalancesByEmp((prev) => {
+        const empBalances = prev[targetEmpId] || [
+          { type: 'Annual Leave', total: 15, used: 0, available: 15 },
+          { type: 'Casual Leave', total: 12, used: 0, available: 12 },
+          { type: 'Sick Leave', total: 12, used: 0, available: 12 }
+        ];
+        const updated = empBalances.map((bal) => {
+          if (bal.type.toLowerCase().includes(targetPrefix) || targetPrefix.includes(bal.type.toLowerCase())) {
             const newUsed = Math.min(bal.total, bal.used + target.days);
             return { ...bal, used: newUsed, available: Math.max(0, bal.total - newUsed) };
           }
           return bal;
-        })
-      );
+        });
+        const next = { ...prev, [targetEmpId]: updated };
+        persistMaster('hrms_leave_balances_by_emp', next);
+        return next;
+      });
     }
 
     if (target) {
@@ -1482,6 +1847,14 @@ export const HrmsDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         punchOut,
         submitRegularization,
         resolveAttendanceException,
+        // Missed Punch Regularization
+        missedPunchRequests,
+        applyMissedPunch,
+        reviewMissedPunch,
+        // Permissions & Short Leaves
+        permissionRequests,
+        applyPermission,
+        reviewPermission,
         submitWfhNotice,
         applyLeave,
         reviewLeave,

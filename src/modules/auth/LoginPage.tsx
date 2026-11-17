@@ -36,6 +36,16 @@ export const LoginPage: React.FC = () => {
   // Auto-detect role whenever email changes
   const detectRoleFromEmail = (em: string): UserRole => {
     const lower = em.toLowerCase().trim();
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = localStorage.getItem('hrms_user_accounts');
+        if (raw) {
+          const accounts = JSON.parse(raw);
+          const matched = accounts.find((a: any) => a.email.toLowerCase() === lower);
+          if (matched && matched.role) return matched.role;
+        }
+      } catch {}
+    }
     if (lower.includes('rohan') || lower.includes('emp') || lower.includes('deshmukh') || lower.includes('employee')) {
       return 'EMPLOYEE';
     } else if (lower.includes('priya') || lower.includes('hr') || lower.includes('nair')) {

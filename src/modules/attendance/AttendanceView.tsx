@@ -7,6 +7,8 @@ import { downloadCSV } from '../../utils/exportUtils';
 import { StatusBadge } from '../../components/common/Badge';
 import { StatCard } from '../../components/common/StatCard';
 import { AttendanceCalendar } from './AttendanceCalendar';
+import { ApplyMissedPunchModal } from './ApplyMissedPunchModal';
+import { ApplyPermissionModal } from './ApplyPermissionModal';
 import {
   CalendarCheck,
   Clock,
@@ -39,6 +41,8 @@ export const AttendanceView: React.FC = () => {
 
   const [viewMode, setViewMode] = useState<'CALENDAR' | 'LEDGER'>('CALENDAR');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [isMissedPunchOpen, setIsMissedPunchOpen] = useState(false);
+  const [isPermissionOpen, setIsPermissionOpen] = useState(false);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>(() => {
     return currentUser.employeeId || 'emp-005';
   });
@@ -190,6 +194,27 @@ export const AttendanceView: React.FC = () => {
               {isEmployee ? 'My Punch Ledger' : 'Company Audit Ledger'}
             </button>
           </div>
+
+          {isEmployee && (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsMissedPunchOpen(true)}
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-bold rounded-full transition-all cursor-pointer"
+              >
+                <Clock className="w-3.5 h-3.5 text-amber-600" />
+                Regularize Miss Punch
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsPermissionOpen(true)}
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-sky-50 hover:bg-sky-100 text-sky-900 border border-sky-200 text-xs font-bold rounded-full transition-all cursor-pointer"
+              >
+                <CalendarCheck className="w-3.5 h-3.5 text-sky-600" />
+                Apply Permission
+              </button>
+            </div>
+          )}
 
           <button
             type="button"
@@ -411,6 +436,18 @@ export const AttendanceView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Missed Punch Modal */}
+      <ApplyMissedPunchModal
+        isOpen={isMissedPunchOpen}
+        onClose={() => setIsMissedPunchOpen(false)}
+      />
+
+      {/* Permission Modal */}
+      <ApplyPermissionModal
+        isOpen={isPermissionOpen}
+        onClose={() => setIsPermissionOpen(false)}
+      />
     </div>
   );
 };

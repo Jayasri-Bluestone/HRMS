@@ -247,7 +247,64 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
 
-    // Demo / Offline Resilient Login
+    // Demo / Offline Resilient Login - check registered employee accounts first
+    if (typeof window !== 'undefined') {
+      try {
+        const savedAccountsRaw = localStorage.getItem('hrms_user_accounts');
+        if (savedAccountsRaw) {
+          const accounts = JSON.parse(savedAccountsRaw);
+          const matchedAcc = accounts.find((a: any) => a.email.toLowerCase() === email.toLowerCase().trim());
+          if (matchedAcc) {
+            if (passwordPlain && matchedAcc.password && matchedAcc.password !== passwordPlain) {
+              throw new Error('Invalid email or password');
+            }
+
+            const targetRole: UserRole = roleOverride || matchedAcc.role || 'EMPLOYEE';
+            const mappedUser: User = {
+              id: matchedAcc.userId || `user-${matchedAcc.employeeId}`,
+              tenantId: matchedAcc.tenantId || 'tenant-bluestone-in',
+              email: matchedAcc.email,
+              name: matchedAcc.name,
+              role: targetRole,
+              employeeId: matchedAcc.employeeId,
+              department: matchedAcc.department,
+              designation: matchedAcc.designation,
+              avatar: DEFAULT_USERS[targetRole]?.avatar || DEFAULT_USERS.EMPLOYEE.avatar
+            };
+
+            setBaseRole(targetRole);
+            setBaseUser(mappedUser);
+            setCurrentRole(targetRole);
+            setCurrentUser(mappedUser);
+            setToken(null);
+            setRefreshToken(null);
+            setIsDemoMode(true);
+            setIsAuthenticated(true);
+
+            persistSession({
+              userId: mappedUser.id,
+              email: mappedUser.email,
+              role: targetRole,
+              baseRole: targetRole,
+              tenantId: mappedUser.tenantId,
+              isDemoMode: true,
+              user: mappedUser,
+              baseUser: mappedUser
+            });
+
+            if (typeof window !== 'undefined') {
+              window.location.hash = 'dashboard';
+            }
+            return true;
+          }
+        }
+      } catch (err: any) {
+        if (err?.message === 'Invalid email or password') {
+          throw err;
+        }
+      }
+    }
+
     const matchedRole: UserRole = roleOverride || inferDemoRoleFromEmail(email);
     const user = DEFAULT_USERS[matchedRole];
 

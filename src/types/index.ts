@@ -140,6 +140,26 @@ export interface Employee {
     accountNumber: string;
     bankName: string;
     ifscOrIban: string;
+    accountHolderName?: string;
+  };
+  statutoryDetails?: {
+    pfNumber?: string;
+    hasExistingPf?: boolean;
+    uanNumber?: string;
+    esiNumber?: string;
+    panNumber?: string;
+    nationalId?: string;
+  };
+  personalDetails?: {
+    gender?: 'MALE' | 'FEMALE' | 'OTHER';
+    dateOfBirth?: string;
+    bloodGroup?: string;
+    maritalStatus?: 'SINGLE' | 'MARRIED' | 'OTHER';
+    workLocation?: string;
+    employmentType?: 'FULL_TIME' | 'CONTRACT' | 'PROBATION' | 'INTERN';
+    emergencyContactName?: string;
+    emergencyContactPhone?: string;
+    currentAddress?: string;
   };
   documentsCount: number;
 }
@@ -172,6 +192,34 @@ export interface MissedPunchRequest {
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
   appliedOn: string;
   managerComments?: string;
+}
+
+export interface PermissionRequest {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  department: string;
+  date: string;
+  startTime: string; // e.g. "03:00 PM"
+  endTime: string;   // e.g. "05:00 PM"
+  durationHours: number; // e.g. 2
+  reasonCategory: 'PERSONAL' | 'MEDICAL' | 'OFFICIAL' | 'EMERGENCY';
+  reason: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  appliedOn: string;
+  managerComments?: string;
+}
+
+export interface UserAccount {
+  email: string;
+  password?: string;
+  role: UserRole;
+  employeeId: string;
+  name: string;
+  tenantId: string;
+  department?: string;
+  designation?: string;
+  shiftId?: string;
 }
 
 export interface LeaveRequest {

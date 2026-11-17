@@ -59,8 +59,8 @@ export const EmployeeList: React.FC = () => {
     return matchesSearch && matchesDept;
   });
 
-  const handleAddEmployee = async (newEmp: Employee) => {
-    await addEmployee(newEmp);
+  const handleAddEmployee = async (newEmp: Employee, credentials?: any) => {
+    await addEmployee(newEmp, credentials);
   };
 
   const handleExportCsv = () => {

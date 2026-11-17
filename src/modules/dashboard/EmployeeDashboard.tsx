@@ -4,6 +4,9 @@ import { useTenant } from '../../contexts/TenantContext';
 import { useHrmsData } from '../../contexts/HrmsDataContext';
 import { ModernCalendar, CalendarEventItem } from '../../components/common/ModernCalendar';
 import { Modal } from '../../components/common/Modal';
+import { ApplyMissedPunchModal } from '../attendance/ApplyMissedPunchModal';
+import { ApplyPermissionModal } from '../attendance/ApplyPermissionModal';
+import { EmployeeHistoryModal } from './EmployeeHistoryModal';
 import { Payslip } from '../../types';
 import { calculateElapsedHours, getTodayDateISO } from '../../utils/dateUtils';
 import {
@@ -18,7 +21,10 @@ import {
   Award,
   ChevronRight,
   BarChart3,
-  Send
+  Send,
+  History,
+  ShieldCheck,
+  Sparkles
 } from 'lucide-react';
 
 interface EmployeeDashboardProps {
@@ -51,10 +57,16 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
   const [selectedCalendarDate, setSelectedCalendarDate] = useState(getTodayDateISO());
   const [isPunching, setIsPunching] = useState(false);
 
-  // WFH notice modal state (replaces window.alert)
+  // WFH notice modal state
   const [isWfhModalOpen, setIsWfhModalOpen] = useState(false);
   const [wfhDate, setWfhDate] = useState(getTodayDateISO());
   const [wfhReason, setWfhReason] = useState('');
+
+  // Missed Punch & Permission & History modals
+  const [isMissedPunchOpen, setIsMissedPunchOpen] = useState(false);
+  const [isPermissionOpen, setIsPermissionOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [historyInitialTab, setHistoryInitialTab] = useState<'attendance' | 'leaves' | 'missed_punch' | 'permissions'>('attendance');
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -269,27 +281,44 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => (onNavigateTab ? onNavigateTab('attendance') : null)}
-                  className="px-4 py-2 bg-white/15 hover:bg-white/25 text-white rounded-xl text-xs font-semibold backdrop-blur-md border border-white/20 transition-all flex items-center gap-1.5 shadow-xs"
-                >
-                  <CalendarCheck className="w-4 h-4 text-[#ff7a1a]" /> Punch Ledger
-                </button>
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={() => onOpenApplyLeave(selectedCalendarDate)}
-                  className="px-4 py-2 bg-[#ff7a1a] hover:bg-[#e8670a] text-[#111318] rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+                  className="px-3.5 py-2 bg-[#ff7a1a] hover:bg-[#e8670a] text-[#111318] rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
                 >
-                  <CalendarOff className="w-4 h-4" /> Apply Leave
+                  <CalendarOff className="w-3.5 h-3.5" /> Apply Leave
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsMissedPunchOpen(true)}
+                  className="px-3.5 py-2 bg-white/15 hover:bg-white/25 text-white rounded-xl text-xs font-semibold backdrop-blur-md border border-white/20 transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
+                >
+                  <Clock className="w-3.5 h-3.5 text-amber-400" /> Miss Punch
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsPermissionOpen(true)}
+                  className="px-3.5 py-2 bg-white/15 hover:bg-white/25 text-white rounded-xl text-xs font-semibold backdrop-blur-md border border-white/20 transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-sky-400" /> Permission
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHistoryInitialTab('attendance');
+                    setIsHistoryOpen(true);
+                  }}
+                  className="px-3.5 py-2 bg-white/15 hover:bg-white/25 text-white rounded-xl text-xs font-semibold backdrop-blur-md border border-white/20 transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
+                >
+                  <History className="w-3.5 h-3.5 text-purple-400" /> My History
                 </button>
                 <button
                   type="button"
                   onClick={() => onOpenPayslip(myPayslip)}
-                  className="px-4 py-2 bg-white text-slate-900 hover:bg-slate-100 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+                  className="px-3.5 py-2 bg-white text-slate-900 hover:bg-slate-100 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
                 >
-                  <Download className="w-4 h-4 text-[#ea580c]" /> {myPayslip.period.split(' ')[0]} Payslip
+                  <Download className="w-3.5 h-3.5 text-[#ea580c]" /> {myPayslip.period.split(' ')[0]} Payslip
                 </button>
               </div>
             </div>
@@ -313,10 +342,10 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
               </div>
               <button
                 type="button"
-                onClick={() => (onNavigateTab ? onNavigateTab('attendance') : null)}
+                onClick={() => setIsMissedPunchOpen(true)}
                 className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shadow-xs transition-colors shrink-0 self-start sm:self-auto cursor-pointer"
               >
-                Fix on Calendar →
+                Apply Regularization →
               </button>
             </div>
           )}
@@ -657,7 +686,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
 
               <button
                 type="button"
-                onClick={() => (onNavigateTab ? onNavigateTab('attendance') : null)}
+                onClick={() => setIsMissedPunchOpen(true)}
                 className="w-full flex items-center justify-between p-3 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-900 border border-rose-200/60 text-xs font-bold transition-all cursor-pointer"
               >
                 <span className="flex items-center gap-2">
@@ -665,6 +694,33 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                   Regularize Missed Punch
                 </span>
                 <ChevronRight className="w-4 h-4 text-rose-400" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsPermissionOpen(true)}
+                className="w-full flex items-center justify-between p-3 rounded-2xl bg-sky-50 hover:bg-sky-100 text-sky-900 border border-sky-200/60 text-xs font-bold transition-all cursor-pointer"
+              >
+                <span className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-sky-600" />
+                  Apply Permission Pass (1–2 Hrs)
+                </span>
+                <ChevronRight className="w-4 h-4 text-sky-400" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setHistoryInitialTab('attendance');
+                  setIsHistoryOpen(true);
+                }}
+                className="w-full flex items-center justify-between p-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 text-xs font-bold transition-all cursor-pointer"
+              >
+                <span className="flex items-center gap-2">
+                  <History className="w-4 h-4 text-purple-600" />
+                  My Activity & History Hub
+                </span>
+                <ChevronRight className="w-4 h-4 text-slate-400" />
               </button>
 
               <button
@@ -685,6 +741,27 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Missed Punch Regularization Modal */}
+      <ApplyMissedPunchModal
+        isOpen={isMissedPunchOpen}
+        onClose={() => setIsMissedPunchOpen(false)}
+        initialDate={selectedCalendarDate}
+      />
+
+      {/* Permission Request Modal */}
+      <ApplyPermissionModal
+        isOpen={isPermissionOpen}
+        onClose={() => setIsPermissionOpen(false)}
+        initialDate={selectedCalendarDate}
+      />
+
+      {/* Employee Activity & Requests History Modal */}
+      <EmployeeHistoryModal
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        initialTab={historyInitialTab}
+      />
 
       {/* Remote / WFH Request Modal */}
       <Modal
